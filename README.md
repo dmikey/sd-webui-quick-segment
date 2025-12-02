@@ -24,16 +24,15 @@ This extension provides an easy-to-use interface for detecting and masking objec
 - **Simple Workflow**:
   1. Upload your image
   2. Select a preset (or enter custom prompt)
-  3. Adjust detection threshold
-  4. Click "Generate Mask"
-  5. View results: Preview | Mask | Cutout for each detection
-  6. Right-click to save individual masks
+  3. Click "Generate Mask"
+  4. Select the best mask from the results
+  5. Click "Send to Inpaint Upload" to start editing immediately
 
 - **Mask Customization**:
   - Adjustable detection threshold
   - Mask expansion/dilation
   - Combined mask option for multiple detections
-  - Separate mask output for each detected region
+  - Invert mask option (great for background replacement)
 
 ## How to Use
 
@@ -53,9 +52,12 @@ This extension provides an easy-to-use interface for detecting and masking objec
 6. **Click "Generate Mask"** and wait for results
 7. **View results** in the gallery:
    - Each row shows: [Preview | Mask | Cutout] for each detection
-   - White areas in mask = selected region
-   - Cutout = extracted region with transparent background
-8. **Save masks**: Right-click on any image in the gallery to save it
+8. **Send to Inpaint**:
+   - Select the best mask using the radio buttons below the gallery
+   - (Optional) Check **"Invert Mask"** if you want to replace the background instead of the subject
+   - Click **"📋 Send to Inpaint Upload"**
+   - The extension will automatically switch you to the **Inpaint Upload** tab with your image and mask ready to go!
+
 
 ## Installation
 
