@@ -37,7 +37,7 @@ sam_device = device
 
 # Body detection presets for easy inpainting
 BODY_PRESETS = {
-    "Full Body": {"prompt": "person . human . body", "threshold": 0.25},
+    "Full Body": {"prompt": "person . human . body", "threshold": 0.20},
     "Face": {"prompt": "face . head", "threshold": 0.3},
     "Upper Body": {"prompt": "torso . chest . upper body", "threshold": 0.25},
     "Hands": {"prompt": "hand . hands", "threshold": 0.25},
@@ -267,42 +267,26 @@ def dino_predict(input_image, dino_model_name, text_prompt, box_threshold):
     return Image.fromarray(show_boxes(image_np, boxes_filt.astype(int), show_index=True)), gr.update(choices=boxes_choice, value=boxes_choice), gr.update(visible=False) if install_success else gr.update(visible=True, value=f"GroundingDINO installment failed. Your process automatically fall back to local groundingdino. See your terminal for more detail and {dino_install_issue_text}")
 
 
-def extract_count_from_prompt(prompt):
-    """Extract a count of people/bodies from the prompt (e.g., '2girls' -> 2)."""
-    if not prompt:
-        return 0
-    
-    # Match patterns like "2girls", "2 girls", "(2girls)", "3 men", "two women"
-    # Simplified to digits for now
-    match = re.search(r"\(?(\d+)\s*(?:girls?|women?|men?|boys?|people?|persons?|bodies?|body|friends?|characters?)\)?", prompt, re.IGNORECASE)
-    if match:
-        try:
-            return int(match.group(1))
-        except ValueError:
-            pass
-    return 0
-
-
 def quick_body_detect(sam_model_name, input_image, body_preset, custom_prompt, box_threshold, dilation_amt, combine_masks):
     """Quick body detection with preset prompts for easy inpainting mask generation."""
     # Try to acquire lock, wait if another task is running
     if not _body_detect_lock.acquire(blocking=False):
 #        print("⏳ Another detection task is running, waiting...")
-        return [], gr.Radio(visible=False), [], "⏳ Another task is in progress. Please wait and try again."
+        return [], gr.update(visible=False), [], "⏳ Another task is in progress. Please wait and try again."
     
     try:
         if sam_model_name is None or sam_model_name == "" or sam_model_name not in sam_model_list:
             if len(sam_model_list) > 0:
                 sam_model_name = sam_model_list[0]
             else:
-                return [], gr.Radio(visible=False), [], "SAM model not found. Please download a SAM model to models/sam folder. See extension README."
+                return [], gr.update(visible=False), [], "SAM model not found. Please download a SAM model to models/sam folder. See extension README."
         if input_image is None:
-            return [], gr.Radio(visible=False), [], "Please upload an image first."
+            return [], gr.update(visible=False), [], "Please upload an image first."
         
         # Get the prompt based on preset
         if body_preset == "Custom":
             if not custom_prompt:
-                return [], gr.Radio(visible=False), [], "Please enter a custom prompt for detection."
+                return [], gr.update(visible=False), [], "Please enter a custom prompt for detection."
             text_prompt = custom_prompt
             threshold = box_threshold
         else:
@@ -313,37 +297,11 @@ def quick_body_detect(sam_model_name, input_image, body_preset, custom_prompt, b
         image_np = np.array(input_image)
         image_np_rgb = image_np[..., :3]
         
-        # Auto-threshold logic based on prompt count
-        target_count = extract_count_from_prompt(text_prompt)
-        boxes_filt = None
-        install_success = False
-        
-        if target_count > 0:
-            # Start with a higher confidence and walk down
-            current_threshold = max(threshold, 0.3)
-            min_threshold = 0.10
-            step = 0.05
-            
-            # print(f"Auto-detecting {target_count} bodies. Starting threshold: {current_threshold}")
-            
-            while current_threshold >= min_threshold:
-                boxes_filt, install_success = dino_predict_internal(input_image, dino_model_list[0], text_prompt, current_threshold)
-                
-                num_detected = boxes_filt.shape[0] if boxes_filt is not None else 0
-                if num_detected >= target_count:
-                    # print(f"Found {num_detected} bodies at threshold {current_threshold:.2f}")
-                    break
-                
-                current_threshold -= step
-        
-        # Fallback or standard detection if no count found or loop finished without success (and boxes_filt is still None or insufficient?)
-        # If we ran the loop and got some boxes (but maybe not enough), we keep them.
-        # If we didn't run the loop (target_count == 0), we run standard detection.
-        if boxes_filt is None:
-            boxes_filt, install_success = dino_predict_internal(input_image, dino_model_list[0], text_prompt, threshold)
+        # Run DINO detection
+        boxes_filt, install_success = dino_predict_internal(input_image, dino_model_list[0], text_prompt, threshold)
         
         if boxes_filt is None or boxes_filt.shape[0] == 0:
-            return [], gr.Radio(visible=False), [], f"No bodies detected with prompt '{text_prompt}'. Try lowering the threshold or using a different preset."
+            return [], gr.update(visible=False), [], f"No bodies detected with prompt '{text_prompt}'. Try lowering the threshold or using a different preset."
         
         # Run SAM
         sam = init_sam_model(sam_model_name)
@@ -366,14 +324,9 @@ def quick_body_detect(sam_model_name, input_image, body_preset, custom_prompt, b
         gallery_output = []
         
         # Filter out small detections
-        # Base threshold is 5% of image area for a single subject
-        # If prompt implies multiple subjects (e.g. "3 girls"), we lower the threshold
-        # because each subject will naturally be smaller.
+        # Base threshold is 1% of image area to allow for smaller objects/people in crowds
         image_area = image_np.shape[0] * image_np.shape[1]
-        
-        subject_count_scaling = target_count if target_count > 1 else 1
-        # Scale down threshold: 1 person -> 5%, 4 people -> ~2.1%
-        min_area_ratio = 0.05 / (subject_count_scaling ** 0.6)
+        min_area_ratio = 0.01
         min_area = image_area * min_area_ratio
         
         # Step 1: Sort all detections by area (descending)
@@ -416,9 +369,8 @@ def quick_body_detect(sam_model_name, input_image, body_preset, custom_prompt, b
                     containment = intersection / min_area_masks if min_area_masks > 0 else 0
                     
                     # Merge if significant overlap or containment
-                    # Lowered IoU threshold to 0.1 to catch loosely connected parts
-                    # Added Containment > 0.5 to catch heads/limbs that overlap significantly with the body box
-                    if iou > 0.1 or containment > 0.5:
+                    # Adjusted thresholds to avoid merging distinct overlapping people while keeping parts together
+                    if iou > 0.25 or containment > 0.75:
                         current_mask = np.logical_or(current_mask, other_mask)
                         current_area = np.sum(current_mask) # Update area
                         merged_indices.add(j)
@@ -439,7 +391,7 @@ def quick_body_detect(sam_model_name, input_image, body_preset, custom_prompt, b
                     final_boxes.append(current_box)
         
         if not final_masks:
-            return [], gr.Radio(visible=False), [], f"Detected {num_detections} regions but all were too small (under {min_area_ratio*100:.1f}% image area)."
+            return [], gr.update(visible=False), [], f"Detected {num_detections} regions but all were too small (under {min_area_ratio*100:.1f}% image area)."
             
         # Generate individual masks for each valid detection
         for i, individual_mask in enumerate(final_masks):
@@ -504,7 +456,7 @@ def quick_body_detect(sam_model_name, input_image, body_preset, custom_prompt, b
         import traceback
 #        print(f"❌ Error in quick_body_detect: {e}")
         traceback.print_exc()
-        return [], gr.Radio(visible=False), [], f"❌ Error: {str(e)}"
+        return [], gr.update(visible=False), [], f"❌ Error: {str(e)}"
     
     finally:
         # Always release the lock
