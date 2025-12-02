@@ -26,7 +26,7 @@ dino_model_info = {
         "url": "https://huggingface.co/ShilongLiu/GroundingDINO/resolve/main/groundingdino_swinb_cogcoor.pth"
     },
 }
-dino_install_issue_text = "permanently switch to local groundingdino on Settings/Segment Anything or submit an issue to https://github.com/IDEA-Research/Grounded-Segment-Anything/issues."
+dino_install_issue_text = "permanently switch to local groundingdino on Settings/Quick Segment or submit an issue to https://github.com/IDEA-Research/Grounded-Segment-Anything/issues."
 
 
 def install_goundingdino():

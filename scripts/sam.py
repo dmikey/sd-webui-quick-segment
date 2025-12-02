@@ -1243,8 +1243,8 @@ def on_after_component(component, **_kwargs):
 
 
 def on_ui_settings():
-    section = ('segment_anything', "Segment Anything")
-    shared.opts.add_option("sam_use_local_groundingdino", shared.OptionInfo(False, "Use local groundingdino to bypass C++ problem", section=section))
+    section = ('quick_segment', "Quick Segment")
+    shared.opts.add_option("sam_use_local_groundingdino", shared.OptionInfo(True, "Use local groundingdino to bypass C++ problem", section=section))
 
 
 script_callbacks.on_ui_settings(on_ui_settings)
