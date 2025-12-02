@@ -4,6 +4,8 @@
 
 This extension provides an easy-to-use interface for detecting and masking objects, body parts, clothing, and faces using AI-powered segmentation. Perfect for creating masks to use with img2img inpainting or other image editing workflows.
 
+![Quick Segment Screenshot](docs/quick-segment.png)
+
 ## Features
 
 - **🎯 Quick Object Detection** - One-click detection of:

@@ -2,3 +2,4 @@ models/*/*.pth
 models/*/*.pt
 __pycache__
 annotator
+.DS_Store   
