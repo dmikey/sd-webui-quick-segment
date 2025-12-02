@@ -17,8 +17,88 @@ function samGetRealCoordinate(image, x1, y1) {
 }
 
 function switchToInpaintUpload() {
-    switch_to_img2img_tab(4)
+    // Switch to img2img tab (index 1)
+    const tabs = gradioApp().querySelector('#tabs');
+    if (tabs) {
+        const buttons = tabs.querySelectorAll(':scope > div:first-child > button');
+        if (buttons && buttons.length > 1) {
+            buttons[1].click(); // img2img tab
+        }
+    }
+
+    // Wait a bit for tab to switch, then go to inpaint upload
+    setTimeout(() => {
+        switch_to_img2img_tab(4); // Inpaint upload is usually tab 4
+
+        // Now copy the images from Quick Segment to Inpaint Upload
+        setTimeout(() => {
+            copyQuickSegmentToInpaint();
+        }, 300);
+    }, 200);
+
     return arguments;
+}
+
+function sendQuickSegmentToInpaint() {
+    console.log("sendQuickSegmentToInpaint called");
+
+    // Determine which tab we're in
+    const tabs = gradioApp().querySelector('#tabs');
+    let tabPrefix = 'img2img_sam_';
+    if (tabs) {
+        const buttons = tabs.querySelectorAll(':scope > div:first-child > button');
+        if (buttons && buttons[0] && buttons[0].classList.contains('selected')) {
+            tabPrefix = 'txt2img_sam_';
+        }
+    }
+
+    // Find the hidden image and mask outputs from Quick Segment
+    const imageContainer = gradioApp().querySelector('#' + tabPrefix + 'body_inpaint_image');
+    const maskContainer = gradioApp().querySelector('#' + tabPrefix + 'body_inpaint_mask');
+
+    if (!imageContainer || !maskContainer) {
+        console.log("Quick Segment inpaint outputs not found for prefix:", tabPrefix);
+        return arguments;
+    }
+
+    const imageImg = imageContainer.querySelector('img');
+    const maskImg = maskContainer.querySelector('img');
+
+    if (!imageImg || !maskImg) {
+        console.log("No image or mask to copy");
+        return arguments;
+    }
+
+    // Switch to img2img tab
+    if (tabs) {
+        const buttons = tabs.querySelectorAll(':scope > div:first-child > button');
+        if (buttons && buttons.length > 1) {
+            buttons[1].click(); // img2img tab
+        }
+    }
+
+    // Wait for tab switch, then navigate to inpaint upload
+    setTimeout(() => {
+        switch_to_img2img_tab(4); // Inpaint upload tab
+
+        // Wait for inpaint upload to load, then copy images
+        setTimeout(() => {
+            console.log("Copying to inpaint upload...");
+            setGradioImageFromBase64('#img_inpaint_base', imageImg.src);
+
+            setTimeout(() => {
+                setGradioImageFromBase64('#img_inpaint_mask', maskImg.src);
+                console.log("Images copied successfully");
+            }, 400);
+        }, 400);
+    }, 200);
+
+    return arguments;
+}
+
+function copyQuickSegmentToInpaint() {
+    // Legacy function for "Switch to Inpaint Upload" button
+    return sendQuickSegmentToInpaint();
 }
 
 // Helper to convert base64 to File object for Gradio upload
@@ -53,42 +133,76 @@ function setGradioImageFromBase64(containerId, imageBase64) {
         return false;
     }
 
-    const file = base64ToFile(imageBase64, 'image.png');
-    if (!file) return false;
+    // First, clear the existing file input to force a fresh state
+    fileInput.value = '';
+    const clearEvent = new Event('change', { bubbles: true });
+    fileInput.dispatchEvent(clearEvent);
 
-    const dt = new DataTransfer();
-    dt.items.add(file);
-    fileInput.files = dt.files;
-    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+    // Small delay to ensure clear is processed
+    setTimeout(() => {
+        // Convert base64/blob URL to actual file
+        fetch(imageBase64)
+            .then(res => res.blob())
+            .then(blob => {
+                // Generate unique filename to force reload
+                const timestamp = Date.now();
+                const file = new File([blob], `image_${timestamp}.png`, { type: 'image/png' });
+                const dt = new DataTransfer();
+                dt.items.add(file);
+                fileInput.files = dt.files;
+
+                // Trigger change event
+                const event = new Event('change', { bubbles: true });
+                fileInput.dispatchEvent(event);
+
+                // Also trigger input event for good measure
+                const inputEvent = new Event('input', { bubbles: true });
+                fileInput.dispatchEvent(inputEvent);
+
+                console.log("Image set successfully for:", containerId);
+            })
+            .catch(err => {
+                console.error("Error setting image:", err);
+            });
+    }, 100);
+
     return true;
 }
 
 // Send body mask to img2img inpaint upload
 function sendToImg2ImgInpaint(imageBase64, maskBase64) {
-    console.log("sendToImg2ImgInpaint called");
+    console.log("sendToImg2ImgInpaint called with images:", !!imageBase64, !!maskBase64);
 
     // Switch to img2img tab
     const tabs = gradioApp().querySelector('#tabs');
     if (tabs) {
         const buttons = tabs.querySelectorAll(':scope > div:first-child > button');
         if (buttons && buttons.length > 1) {
+            console.log("Switching to img2img tab (index 1)");
             buttons[1].click(); // img2img tab
         }
     }
 
     // Wait for tab switch, then go to inpaint upload
     setTimeout(() => {
-        switch_to_img2img_tab(4); // Inpaint upload tab
+        if (typeof switch_to_img2img_tab === 'function') {
+            console.log("Switching to Inpaint Upload (tab 4)");
+            switch_to_img2img_tab(4); // Inpaint upload tab
+        } else {
+            console.error("switch_to_img2img_tab function not found!");
+        }
 
         setTimeout(() => {
             // Set the base image
             if (imageBase64) {
+                console.log("Setting base image...");
                 setGradioImageFromBase64('#img_inpaint_base', imageBase64);
             }
 
             // Set the mask (with slight delay)
             setTimeout(() => {
                 if (maskBase64) {
+                    console.log("Setting mask image...");
                     setGradioImageFromBase64('#img_inpaint_mask', maskBase64);
                 }
             }, 500);

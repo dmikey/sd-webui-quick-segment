@@ -490,7 +490,7 @@ def quick_body_detect(sam_model_name, input_image, body_preset, custom_prompt, b
             ])
         
         # Create mask choices for radio buttons
-        mask_choices = [f"Body {i+1}" for i in range(num_detections)]
+        mask_choices = [f"Mask {i+1}" for i in range(num_detections)]
         if combine_masks and num_detections > 1:
             mask_choices.append("All Combined")
         
@@ -547,7 +547,7 @@ def copy_body_mask_to_inpaint(input_image, gallery, selected_mask, mask_choices,
     
     try:
         # Find the index of the selected mask
-        choices = mask_choices if isinstance(mask_choices, list) else ["Body 1"]
+        choices = mask_choices if isinstance(mask_choices, list) else ["Mask 1"]
         selector = selected_mask if selected_mask else choices[0]
         
         if selector in choices:
@@ -967,8 +967,19 @@ class Script(scripts.Script):
                     
                     body_output_gallery = gr.Gallery(label="Results: Each row = [Preview | Mask | Cutout] per detection", columns=3, height=400)
                     
-                    body_mask_selector = gr.Radio(visible=False)  # Hidden, not used
-                    body_mask_choices = gr.State(value=["Body 1"])  # Store choices for processing
+                    with gr.Row():
+                        body_mask_selector = gr.Radio(label="Select Mask to Copy", choices=["Mask 1"], value="Mask 1", visible=False, elem_id=f"{tab_prefix}body_mask_selector")
+                        body_invert_mask = gr.Checkbox(label="Invert Mask", value=False, visible=False, info="Invert the mask (for background editing)")
+                    
+                    body_mask_choices = gr.State(value=["Mask 1"])  # Store choices for processing
+                    
+                    with gr.Row(visible=False, elem_id=f"{tab_prefix}body_copy_row") as body_copy_row:
+                        body_copy_button = gr.Button(value="📋 Send to Inpaint Upload", variant="secondary", elem_id=f"{tab_prefix}body_send_to_inpaint")
+                        body_copy_status = gr.Text(label="", value="", show_label=False, container=False)
+                    
+                    # Hidden components to store the prepared image and mask
+                    body_inpaint_image = gr.Image(visible=False, type="pil", elem_id=f"{tab_prefix}body_inpaint_image")
+                    body_inpaint_mask = gr.Image(visible=False, type="pil", elem_id=f"{tab_prefix}body_inpaint_mask")
                     
                     body_status = gr.Text(label="Status", value="Ready - Upload an image and click Generate Mask")
                     
@@ -980,10 +991,36 @@ class Script(scripts.Script):
                         show_progress=False
                     )
                     
+                    def show_copy_ui(mask_choices):
+                        """Show copy UI elements when masks are generated"""
+                        has_masks = len(mask_choices) > 0 if isinstance(mask_choices, list) else False
+                        return (
+                            gr.update(visible=has_masks),  # body_copy_row
+                            gr.update(visible=has_masks),  # body_mask_selector visibility
+                            gr.update(visible=has_masks)   # body_invert_mask
+                        )
+                    
                     body_generate_btn.click(
                         fn=quick_body_detect,
                         inputs=[sam_model_name, body_input_image, body_preset, body_custom_prompt, body_threshold, body_dilation, body_combine_masks],
                         outputs=[body_output_gallery, body_mask_selector, body_mask_choices, body_status]
+                    ).then(
+                        fn=show_copy_ui,
+                        inputs=[body_mask_choices],
+                        outputs=[body_copy_row, body_mask_selector, body_invert_mask],
+                        show_progress=False
+                    )
+                    
+                    # Send to inpaint: prepare images then trigger JS to copy them
+                    body_copy_button.click(
+                        fn=copy_body_mask_to_inpaint,
+                        inputs=[body_input_image, body_output_gallery, body_mask_selector, body_mask_choices, body_invert_mask],
+                        outputs=[body_inpaint_image, body_inpaint_mask, body_copy_status]
+                    ).then(
+                        fn=lambda *args: None,
+                        _js="sendToImg2ImgInpaint",
+                        inputs=[body_inpaint_image, body_inpaint_mask],
+                        outputs=[]
                     )
             
             # Only disabled tabs are in the if False block
