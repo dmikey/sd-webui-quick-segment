@@ -8,7 +8,7 @@ This extension provides an easy-to-use interface for detecting and masking objec
 
 ## Features
 
-- **🎯 Quick Object Detection** - One-click detection of:
+- **Quick Object Detection** - One-click detection of:
   - Full body, upper/lower body
   - Face and facial features
   - Hands and feet
@@ -16,12 +16,12 @@ This extension provides an easy-to-use interface for detecting and masking objec
   - Background
   - Custom object detection via text prompts
 
-- **🤖 AI-Powered Segmentation** - Uses state-of-the-art models:
+- **AI-Powered Segmentation** - Uses state-of-the-art models:
   - SAM (Segment Anything Model) for precise mask generation
   - GroundingDINO for text-based object detection
   - Multiple SAM model options (standard, HQ, mobile)
 
-- **⚡ Simple Workflow**:
+- **Simple Workflow**:
   1. Upload your image
   2. Select a preset (or enter custom prompt)
   3. Adjust detection threshold
@@ -29,7 +29,7 @@ This extension provides an easy-to-use interface for detecting and masking objec
   5. View results: Preview | Mask | Cutout for each detection
   6. Right-click to save individual masks
 
-- **🎨 Mask Customization**:
+- **Mask Customization**:
   - Adjustable detection threshold
   - Mask expansion/dilation
   - Combined mask option for multiple detections
