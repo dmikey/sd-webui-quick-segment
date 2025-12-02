@@ -45,6 +45,7 @@ BODY_PRESETS = {
     "Clothing": {"prompt": "clothing . clothes . shirt . pants . dress . jacket", "threshold": 0.25},
     "Hair": {"prompt": "hair", "threshold": 0.3},
     "Arms": {"prompt": "arm . arms", "threshold": 0.25},
+    "Background": {"prompt": "background . wall . floor . sky . ground . room . scenery", "threshold": 0.25},
     "Custom": {"prompt": "", "threshold": 0.3},
 }
 
@@ -884,7 +885,7 @@ def ui_processor(use_random=True, use_cnet=True):
 class Script(scripts.Script):
 
     def title(self):
-        return 'Quick Body Mask'
+        return 'Quick Segment'
 
     def show(self, is_img2img):
         return scripts.AlwaysVisible
@@ -894,7 +895,7 @@ class Script(scripts.Script):
             priorize_sam_scripts(is_img2img)
         tab_prefix = ("img2img" if is_img2img else "txt2img") + "_sam_"
         ui_process = ()
-        with gr.Accordion('Quick Body Mask', open=False, elem_id=f"{tab_prefix}accordion"):
+        with gr.Accordion('Quick Segment', open=False, elem_id=f"{tab_prefix}accordion"):
             with gr.Row():
                 with gr.Column(scale=10):
                     with gr.Row():
@@ -908,17 +909,17 @@ class Script(scripts.Script):
                         sam_device = "cpu" if use_cpu else device
                     sam_use_cpu.change(fn=change_sam_device, inputs=[sam_use_cpu], show_progress=False)
             
-            # Quick Body Mask (only active tab)
+            # Quick Segment (only active tab)
             with gr.Tabs():
-                with gr.TabItem(label="Quick Body Mask"):
+                with gr.TabItem(label="Quick Segment"):
                     gr.Markdown("""
-## 🎯 Quick Body Mask
-**One-click body detection and mask generation.** Perfect for creating masks of body parts, clothing, faces, etc.
+## 🎯 Quick Segment
+**One-click object detection and mask generation.** Perfect for creating masks of body parts, clothing, faces, backgrounds, etc.
 
 **How to use:**
 1. Upload your image below
-2. Select a preset (Full Body, Face, Hands, etc.)
-3. Click "Generate Body Mask" - wait for detection
+2. Select a preset (Full Body, Face, Hands, Background, etc.)
+3. Click "Generate Mask" - wait for detection
 4. Right-click on the mask image in the gallery to save it
 """)
                     body_input_image = gr.Image(label="Upload Image", source="upload", type="pil", image_mode="RGBA", elem_id=f"{tab_prefix}body_input_image")
@@ -962,14 +963,14 @@ class Script(scripts.Script):
                             elem_id=f"{tab_prefix}body_combine_masks_v2"
                         )
                     
-                    body_generate_btn = gr.Button(value="🎯 Generate Body Mask", variant="primary")
+                    body_generate_btn = gr.Button(value="🎯 Generate Mask", variant="primary")
                     
                     body_output_gallery = gr.Gallery(label="Results: Each row = [Preview | Mask | Cutout] per detection", columns=3, height=400)
                     
                     body_mask_selector = gr.Radio(visible=False)  # Hidden, not used
                     body_mask_choices = gr.State(value=["Body 1"])  # Store choices for processing
                     
-                    body_status = gr.Text(label="Status", value="Ready - Upload an image and click Generate")
+                    body_status = gr.Text(label="Status", value="Ready - Upload an image and click Generate Mask")
                     
                     # Event handlers
                     body_preset.change(

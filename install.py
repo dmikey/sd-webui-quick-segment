@@ -10,4 +10,4 @@ with open(req_file) as file:
         if not launch.is_installed(lib):
             launch.run_pip(
                 f"install {lib}",
-                f"sd-webui-segment-anything requirement: {lib}")
+                f"sd-webui-quick-segment requirement: {lib}")

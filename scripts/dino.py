@@ -50,12 +50,12 @@ def install_goundingdino():
                 print(f"Failed to build dymanic library. Will uninstall GroundingDINO from pip and fall back to local groundingdino this time. Please {dino_install_issue_text}")
                 run_pip_uninstall(
                     f"groundingdino",
-                    f"sd-webui-segment-anything requirement: groundingdino")
+                    f"sd-webui-quick-segment requirement: groundingdino")
             else:
                 print(f"Failed to build dymanic library. Will uninstall GroundingDINO from pip and re-try installing from GitHub source code. Please {dino_install_issue_text}")
                 run_pip_uninstall(
                     f"uninstall groundingdino",
-                    f"sd-webui-segment-anything requirement: groundingdino")
+                    f"sd-webui-quick-segment requirement: groundingdino")
             return False
 
     import launch
@@ -66,7 +66,7 @@ def install_goundingdino():
     try:
         launch.run_pip(
             f"install git+https://github.com/IDEA-Research/GroundingDINO",
-            f"sd-webui-segment-anything requirement: groundingdino")
+            f"sd-webui-quick-segment requirement: groundingdino")
         print("GroundingDINO install success. Verifying if dynamic library build success.")
         return verify_dll()
     except Exception:
