@@ -717,7 +717,7 @@ def priorize_sam_scripts(is_img2img):
     cnet_idx, sam_idx = None, None
     if is_img2img:
         for idx, s in enumerate(scripts.scripts_img2img.alwayson_scripts):
-            if s.title() == "Segment Anything":
+            if s.title() == "Quick Segment":
                 sam_idx = idx
             elif s.title() == "ControlNet":
                 cnet_idx = idx
@@ -726,7 +726,7 @@ def priorize_sam_scripts(is_img2img):
                 sam_idx] = scripts.scripts_img2img.alwayson_scripts[sam_idx], scripts.scripts_img2img.alwayson_scripts[cnet_idx]
     else:
         for idx, s in enumerate(scripts.scripts_txt2img.alwayson_scripts):
-            if s.title() == "Segment Anything":
+            if s.title() == "Quick Segment":
                 sam_idx = idx
             elif s.title() == "ControlNet":
                 cnet_idx = idx
@@ -979,7 +979,7 @@ class Script(scripts.Script):
             if False:  # Disabled tabs
                 with gr.TabItem(label="Single Image"):
                     gr.HTML(value="<p>Left click the image to add one positive point (black dot). Right click the image to add one negative point (red dot). Left click the point to remove it.</p>")
-                    sam_input_image = gr.Image(label="Image for Segment Anything", elem_id=f"{tab_prefix}input_image", source="upload", type="pil", image_mode="RGBA")
+                    sam_input_image = gr.Image(label="Image for Quick Segment", elem_id=f"{tab_prefix}input_image", source="upload", type="pil", image_mode="RGBA")
                     sam_remove_dots = gr.Button(value="Remove all point prompts")
                     sam_dummy_component = gr.Label(visible=False)
                     sam_remove_dots.click(
@@ -987,10 +987,10 @@ class Script(scripts.Script):
                         _js="samRemoveDots",
                         inputs=[sam_dummy_component],
                         outputs=None)
-                    gr.HTML(value="<p>GroundingDINO + Segment Anything can achieve [text prompt]->[object detection]->[segmentation]</p>")
+                    gr.HTML(value="<p>GroundingDINO + Quick Segment can achieve [text prompt]->[object detection]->[segmentation]</p>")
                     dino_checkbox = gr.Checkbox(value=False, label="Enable GroundingDINO", elem_id=f"{tab_prefix}dino_enable_checkbox")
                     with gr.Column(visible=False) as dino_column:
-                        gr.HTML(value="<p>Due to the limitation of Segment Anything, when there are point prompts, at most 1 box prompt will be allowed; when there are multiple box prompts, no point prompts are allowed.</p>")
+                        gr.HTML(value="<p>Due to the limitation of Quick Segment, when there are point prompts, at most 1 box prompt will be allowed; when there are multiple box prompts, no point prompts are allowed.</p>")
                         dino_model_name = gr.Dropdown(label="GroundingDINO Model (Auto download from huggingface)", choices=dino_model_list, value=dino_model_list[0])
                         dino_text_prompt = gr.Textbox(placeholder="You must enter text prompts to enable groundingdino. Otherwise this extension will fall back to point prompts only.", label="GroundingDINO Detection Prompt", elem_id=f"{tab_prefix}dino_text_prompt")
                         dino_box_threshold = gr.Slider(label="GroundingDINO Box Threshold", minimum=0.0, maximum=1.0, value=0.3, step=0.001)
@@ -1015,9 +1015,9 @@ class Script(scripts.Script):
                         inputs=[dino_checkbox],
                         outputs=[dino_column],
                         show_progress=False)
-                    sam_output_mask_gallery = gr.Gallery(label='Segment Anything Output', columns=3)
+                    sam_output_mask_gallery = gr.Gallery(label='Quick Segment Output', columns=3)
                     sam_submit = gr.Button(value="Preview Segmentation", elem_id=f"{tab_prefix}run_button")
-                    sam_result = gr.Text(value="", label="Segment Anything status")
+                    sam_result = gr.Text(value="", label="Quick Segment status")
                     sam_submit.click(
                         fn=sam_predict,
                         _js='submit_sam',
