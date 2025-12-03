@@ -7,7 +7,7 @@ from PIL import Image
 import numpy as np
 
 from modules.api.api import encode_pil_to_base64, decode_base64_to_image
-from scripts.sam import sam_predict, dino_predict, update_mask, cnet_seg, categorical_mask
+from scripts.sam import sam_predict, dino_predict, update_mask, cnet_seg, categorical_mask, quick_body_detect
 from scripts.sam import sam_model_list
 
 
@@ -237,6 +237,53 @@ def sam_api(_: gr.Blocks, app: FastAPI):
         if resized_input_img is not None:
             result["resized_input"] = encode_to_base64(resized_input_img)
         return result
+
+    class QuickSegmentRequest(BaseModel):
+        sam_model_name: str = "sam_vit_h_4b8939.pth"
+        input_image: str
+        body_preset: str = "Full Body"
+        custom_prompt: Optional[str] = None
+        box_threshold: float = 0.25
+        dilation_amt: int = 10
+        combine_masks: bool = False
+
+    @app.post("/sam/quick-segment")
+    async def api_quick_segment(payload: QuickSegmentRequest = Body(...)) -> Any:
+        print(f"SAM API /sam/quick-segment received request")
+        payload.input_image = decode_to_pil(payload.input_image).convert('RGBA')
+        
+        gallery, _, mask_choices, status = quick_body_detect(
+            payload.sam_model_name,
+            payload.input_image,
+            payload.body_preset,
+            payload.custom_prompt,
+            payload.box_threshold,
+            payload.dilation_amt,
+            payload.combine_masks
+        )
+        
+        print(f"SAM API /sam/quick-segment finished with status: {status}")
+        
+        # Gallery contains [preview, mask, cutout] for each detection
+        detections = []
+        
+        for i, choice in enumerate(mask_choices):
+            # Calculate index in gallery
+            # Each detection has 3 images
+            base_idx = i * 3
+            if base_idx + 2 < len(gallery):
+                detection = {
+                    "label": choice,
+                    "preview": encode_to_base64(gallery[base_idx]),
+                    "mask": encode_to_base64(gallery[base_idx+1]),
+                    "cutout": encode_to_base64(gallery[base_idx+2])
+                }
+                detections.append(detection)
+                
+        return {
+            "msg": status,
+            "detections": detections
+        }
 
 
 try:

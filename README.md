@@ -91,7 +91,7 @@ GroundingDINO models will be automatically downloaded on first use.
 
 **GroundingDINO Installation Issues:**
 - This extension uses local GroundingDINO by default to avoid C++/CUDA compilation issues
-- If you encounter errors, go to Settings → Segment Anything → Enable "Use local groundingdino"
+- If you encounter errors, go to Settings → Quick Segment → Enable "Use local groundingdino"
 - Models are auto-downloaded from HuggingFace on first use
 
 **MPS/Apple Silicon Issues:**
